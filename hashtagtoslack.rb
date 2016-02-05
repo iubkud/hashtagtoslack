@@ -1,6 +1,10 @@
 require 'dotenv'
 Dotenv.load
 require 'twitter'
+require 'net/http'
+
+require 'rubygems'
+require 'json'
 
 # Authenticate user
 client = Twitter::REST::Client.new do |config|
@@ -16,20 +20,39 @@ end
 # Tweets come in sorted newest to oldest, we need to reverse them
 @tweets = @tweets.sort {|a,b| a.id <=> b.id}
 
-# Set counter for last tweet check
-i = 1
 
 # Loop through each tweet
-@tweets.each do |t|
-	if (t.user.screen_name != "proscapetech")
-		puts "@#{t.user.screen_name} #{t.created_at}"
-		puts t.id
-	end
+def check_tweets
+	# Set counter for last tweet check
+	i = 1
 
-	if @tweets.count == i
-		text = File.read(".env")
-		new_contents = text.gsub("#{ENV['LAST_TWEET_ID']}", "#{t.id}")
-		File.open(".env", "w") {|file| file.puts new_contents }
+	@tweets.take(1).each do |t|
+		if (t.user.screen_name != "proscapetech")
+			slack_message(t.id, t.user.screen_name, t.text)
+		end
+
+		if @tweets.count == i
+			text = File.read(".env")
+			new_contents = text.gsub("#{ENV['LAST_TWEET_ID']}", "#{t.id}")
+			# File.open(".env", "w") {|file| file.puts new_contents }
+		end
+		i += 1
 	end
-	i += 1
 end
+
+# Post slack message
+def slack_message(id, screen_name, text)
+	uri = URI.parse(ENV["SLACK_WEBHOOK_URL"])
+	http = Net::HTTP.new(uri.host, uri.port)
+	http.use_ssl = true
+	request = Net::HTTP::Post.new(uri.request_uri, {'Content-Type' => 'application/json'})
+	request.body = {
+		"username" => "twitterbot",
+		"icon_emoji" => ":rseixas:",
+	    "text"     => "#{id}"
+	}.to_json
+	response = http.request(request)
+	puts response.body
+end
+
+check_tweets
