@@ -1,10 +1,9 @@
 require 'dotenv'
-Dotenv.load
 require 'twitter'
 require 'net/http'
-
-require 'rubygems'
 require 'json'
+
+Dotenv.load
 
 # Authenticate user
 client = Twitter::REST::Client.new do |config|
@@ -26,15 +25,17 @@ def check_tweets
 	# Set counter for last tweet check
 	i = 1
 
-	@tweets.take(1).each do |t|
+	@tweets.each do |t|
+		# Only post tweets NOT from @proscapetech
 		if (t.user.screen_name != "proscapetech")
 			slack_message(t.id, t.user.screen_name, t.text)
 		end
 
+		# On the last tweet, store the ID in ENV["LAST_TWEET_ID"]
 		if @tweets.count == i
 			text = File.read(".env")
 			new_contents = text.gsub("#{ENV['LAST_TWEET_ID']}", "#{t.id}")
-			# File.open(".env", "w") {|file| file.puts new_contents }
+			File.open(".env", "w") {|file| file.puts new_contents }
 		end
 		i += 1
 	end
@@ -49,7 +50,7 @@ def slack_message(id, screen_name, text)
 	request.body = {
 		"username" => "twitterbot",
 		"icon_emoji" => ":rseixas:",
-	    "text"     => "#{id}"
+	    "text"     => "<http://twitter.com/statuses/#{id}|@#{screen_name}> : #{text}"
 	}.to_json
 	response = http.request(request)
 	puts response.body
