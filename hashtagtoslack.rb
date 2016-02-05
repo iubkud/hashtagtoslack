@@ -50,8 +50,9 @@ def slack_message(id, screen_name, text)
 	request.body = {
 		"username" => "twitterbot",
 		"icon_emoji" => ":rseixas:",
-	    "text"     => "<http://twitter.com/statuses/#{id}|@#{screen_name}> : #{text}"
+	  "text"     => "<http://twitter.com/statuses/#{id}|@#{screen_name}> : #{text}"
 	}.to_json
+	
 	response = http.request(request)
 	puts response.body
 end
