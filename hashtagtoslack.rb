@@ -2,6 +2,7 @@ require 'dotenv'
 Dotenv.load
 require 'twitter'
 
+# Authenticate user
 client = Twitter::REST::Client.new do |config|
   config.consumer_key        = ENV["TWITTER_API_KEY"]
   config.consumer_secret     = ENV["TWITTER_API_SECRET"]
@@ -9,18 +10,26 @@ client = Twitter::REST::Client.new do |config|
   config.access_token_secret = ENV["TWITTER_ACCESS_SECRET"]
 end
 
-@tweets = client.search("#loveproscape", :since_id => "693128269173002240")
+# Get tweets with #loveproscape since last time script ran
+@tweets = client.search("#loveproscape", :since_id => ENV["LAST_TWEET_ID"])
 
+# Tweets come in sorted newest to oldest, we need to reverse them
+@tweets = @tweets.sort {|a,b| a.id <=> b.id}
+
+# Set counter for last tweet check
 i = 1
 
+# Loop through each tweet
 @tweets.each do |t|
 	if (t.user.screen_name != "proscapetech")
-		#puts "@#{t.user.screen_name} #{t.text}"
+		puts "@#{t.user.screen_name} #{t.created_at}"
 		puts t.id
 	end
 
 	if @tweets.count == i
-		puts "LAST TWEET BY @#{t.user.screen_name}"
+		text = File.read(".env")
+		new_contents = text.gsub("#{ENV['LAST_TWEET_ID']}", "#{t.id}")
+		File.open(".env", "w") {|file| file.puts new_contents }
 	end
 	i += 1
 end
